@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Flow Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="profile-styles.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-panel">
+            <div class="header-content">
+                <h1>Money Flow</h1>
+                <div class="date-display" id="currentDate"></div>
+            </div>
+            <div class="header-center">
+                <div class="profile-indicator">
+                    <i class="fa-solid fa-user"></i>
+                    <span id="currentProfileName">전체 보기</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="backupBtn" class="icon-btn" title="Backup"><i class="fa-solid fa-download"></i></button>
+                <button id="restoreBtn" class="icon-btn" title="Restore"><i class="fa-solid fa-upload"></i></button>
+                <input type="file" id="restoreInput" style="display: none;" accept=".json">
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="flow">
+                <i class="fa-solid fa-diagram-project"></i> 흐름도 (Flow)
+            </button>
+            <button class="tab-btn" data-tab="dashboard">
+                <i class="fa-solid fa-chart-pie"></i> 포트폴리오
+            </button>
+            <button class="tab-btn" data-tab="editor">
+                <i class="fa-solid fa-pen-to-square"></i> 편집 (Editor)
+            </button>
+            <button class="tab-btn" data-tab="profile">
+                <i class="fa-solid fa-user"></i> 프로필 (Profile)
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main>
+            <!-- 1. Flow View -->
+            <section id="flowView" class="tab-content active">
+                <div class="glass-panel canvas-container">
+                    <!-- Canvas for drawing Sankey lines -->
+                    <canvas id="flowCanvas"></canvas>
+                    <!-- Overlay for Nodes (HTML elements for better styling/interaction) -->
+                    <div id="nodeOverlay" class="node-overlay">
+                        <!-- Nodes will be injected here via JS -->
+                    </div>
+                </div>
+                <div class="flow-controls">
+                    <select id="flowFilter"
+                        style="padding: 8px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-primary); margin-right: 10px;">
+                        <option value="all">전체 보기 (All)</option>
+                        <!-- Options will be dynamic -->
+                    </select>
+                    <button id="refreshFlowBtn" class="cta-small"><i class="fa-solid fa-rotate"></i> 흐름 새로고침</button>
+                </div>
+            </section>
+
+            <!-- 2. Dashboard View -->
+            <section id="dashboardView" class="tab-content">
+
+                <!-- Simulation Controls -->
+                <div class="glass-panel simulation-controls" style="margin-bottom: 20px; padding: 15px;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <h3 style="margin:0; color:var(--accent-secondary);"><i
+                                class="fa-solid fa-clock-rotate-left"></i> 미래 시뮬레이션</h3>
+
+                        <div style="display:flex; gap:15px; align-items:center;">
+                            <!-- Projection Period -->
+                            <select id="simPeriod" style="width:auto; padding:5px 10px;">
+                                <option value="0">현재 (Current)</option>
+                                <option value="12">1년 후</option>
+                                <option value="60">5년 후</option>
+                                <option value="120">10년 후</option>
+                            </select>
+
+                            <!-- Inflation -->
+                            <div style="display:flex; align-items:center; gap:5px;">
+                                <label style="font-size:0.8rem; color:#94a3b8;">물가상승률(%)</label>
+                                <input type="number" id="simInflation" value="2.5" step="0.1"
+                                    style="width:60px; padding:5px;">
+                            </div>
+
+                            <!-- Real vs Nominal -->
+                            <button id="simRealToggle" class="toggle-btn" data-active="false"
+                                style="padding:5px 10px; border-radius:15px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.1); color:white; cursor:pointer;">
+                                명목가치 (Nominal)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="card glass-panel total-summary">
+                        <h3>총 자산 (Net Worth)</h3>
+                        <div class="value-huge" id="totalNetWorth">0만</div>
+                    </div>
+                    <div class="card glass-panel">
+                        <h3>월간 총 수입</h3>
+                        <div class="value-large text-income" id="totalMonthlyIncome">0만</div>
+                    </div>
+                    <div class="card glass-panel">
+                        <h3>월간 투자/저축</h3>
+                        <div class="value-large text-invest" id="totalMonthlyInvest">0만</div>
+                    </div>
+                </div>
+
+                <div class="chart-container glass-panel">
+                    <h3>자산 포트폴리오</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="portfolioChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Editor View -->
+            <section id="editorView" class="tab-content">
+                <div class="editor-layout">
+                    <!-- Node List -->
+                    <div class="editor-panel glass-panel">
+                        <div class="panel-header">
+                            <h3>노드 관리 (Nodes)</h3>
+                            <button id="addNodeBtn" class="icon-btn-small"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <ul id="editorNodeList" class="editor-list">
+                            <!-- Items -->
+                        </ul>
+                    </div>
+
+                    <!-- Link List -->
+                    <div class="editor-panel glass-panel">
+                        <div class="panel-header">
+                            <h3>연결 관리 (Links)</h3>
+                            <button id="addLinkBtn" class="icon-btn-small"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <ul id="editorLinkList" class="editor-list">
+                            <!-- Items -->
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Profile View -->
+            <section id="profileView" class="tab-content hidden">
+                <div class="profile-selector">
+                    <h2 style="margin-bottom: 20px; text-align: center;">
+                        <i class="fa-solid fa-users"></i> 프로필 선택
+                    </h2>
+
+                    <div id="profileCards" class="profile-cards">
+                        <!-- Profile cards will be inserted here -->
+                    </div>
+
+                    <div class="glass-panel" style="padding:15px; margin-top:30px;">
+                        <h3>새 프로필 추가</h3>
+                        <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+                            <input type="text" id="ownerInput" placeholder="프로필 이름 (예: 아빠, 엄마, 공동)"
+                                style="flex:1; padding:8px;" />
+                            <button id="addOwnerBtn" class="cta-small">
+                                <i class="fa-solid fa-plus"></i> 추가
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel"
+                        style="padding:15px; margin-top:30px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <h3 style="color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> 위험 구역</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">
+                            모든 데이터를 삭제하고 초기 상태로 되돌립니다.
+                        </p>
+                        <button id="resetDataBtn" class="cta-small"
+                            style="background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #ef4444;">
+                            초기화 (Reset All)
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="nodeModal" class="modal-overlay hidden">
+        <div class="modal glass-panel">
+            <h3>노드 추가/수정</h3>
+            <form id="nodeForm">
+                <input type="hidden" id="nodeId">
+                <div class="input-row">
+                    <label>이름</label>
+                    <input type="text" id="nodeName" required>
+                </div>
+                <div class="input-row">
+                    <label>소유자 (Owner)</label>
+                    <select id="nodeOwner" required>
+                        <!-- Options will be populated via JS -->
+                    </select>
+                </div>
+                <div class="input-row">
+                    <label>종류</label>
+                    <select id="nodeType">
+                        <option value="income">수입 (Income)</option>
+                        <option value="bucket">계좌/통장 (Account)</option>
+                        <option value="expense">지출 (Expense)</option>
+                        <option value="asset">투자자산 (Asset)</option>
+                    </select>
+                </div>
+                <div class="input-row">
+                    <label>금액 (만원)</label>
+                    <input type="number" id="nodeValue" placeholder="예: 350 (350만원)">
+                </div>
+                <!-- Interest Rate (Hidden unless Asset) -->
+                <div class="input-row hidden" id="interestRateRow">
+                    <label>연 수익률 (%) (Annual Interest)</label>
+                    <input type="number" id="nodeInterest" step="0.1" placeholder="2.5">
+                </div>
+
+                <button type="submit" class="submit-btn">저장</button>
+            </form>
+            <button class="close-btn-modal" id="closeNodeModal">취소</button>
+        </div>
+    </div>
+
+    <div id="linkModal" class="modal-overlay hidden">
+        <div class="modal glass-panel">
+            <h3>연결 추가 (Flow)</h3>
+            <form id="linkForm">
+                <div class="input-row">
+                    <label>보내는 곳 (Source)</label>
+                    <select id="linkSource" required></select>
+                </div>
+                <div class="input-row">
+                    <label>받는 곳 (Target)</label>
+                    <select id="linkTarget" required></select>
+                </div>
+                <div class="input-row">
+                    <label>금액 (Amount)</label>
+                    <input type="number" id="linkAmount" required>
+                </div>
+                <button type="submit" class="submit-btnLink">연결 저장</button>
+            </form>
+            <button class="close-btn-modal" id="closeLinkModal">취소</button>
+        </div>
+    </div>
+
+    <script src="chart_setup.js"></script>
+    <!-- Still global for now as it wasn't refactored yet, or we can move it later -->
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
