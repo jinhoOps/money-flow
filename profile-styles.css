@@ -1,0 +1,115 @@
+/* Profile Selector */
+.profile-selector {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.profile-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.profile-card {
+    background: var(--glass-bg);
+    border: 2px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.profile-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent-primary);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
+
+.profile-card.active {
+    border-color: var(--accent-success);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(99, 102, 241, 0.1));
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+}
+
+.profile-card-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    color: var(--accent-primary);
+}
+
+.profile-card.active .profile-card-icon {
+    color: var(--accent-success);
+}
+
+.profile-card-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.profile-card-stats {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.profile-card-delete {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.profile-card-delete:hover {
+    background: rgba(239, 68, 68, 0.4);
+    transform: scale(1.1);
+}
+
+.profile-card-delete i {
+    color: #ef4444;
+    font-size: 0.9rem;
+}
+
+/* Header Profile Indicator */
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.profile-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid var(--accent-primary);
+    border-radius: 20px;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.profile-indicator i {
+    font-size: 1rem;
+}
+
+header.glass-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+}
