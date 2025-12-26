@@ -68,7 +68,8 @@ export class UIManager {
             // Sub-items
             subItemsRow: document.getElementById('subItemsRow'),
             subItemsContainer: document.getElementById('subItemsContainer'),
-            addSubItemBtn: document.getElementById('addSubItemBtn')
+            addSubItemBtn: document.getElementById('addSubItemBtn'),
+            subItemsTotal: document.getElementById('subItemsTotal')
         };
 
         this.selectedSourceId = null;
@@ -331,6 +332,14 @@ export class UIManager {
                 this.addSubItemRow();
             });
         }
+
+        if (this.els.subItemsContainer) {
+            this.els.subItemsContainer.addEventListener('input', (event) => {
+                if (event.target.matches('input')) {
+                    this.updateSubItemsTotal();
+                }
+            });
+        }
     }
 
     updateOwnerList() {
@@ -456,6 +465,7 @@ export class UIManager {
         this.els.targetWeightRow.classList.add('hidden'); // Default hide
         this.els.subItemsRow.classList.add('hidden'); // Default hide
         this.els.subItemsContainer.innerHTML = ''; // Clear sub-items
+        this.updateSubItemsTotal();
         
         // Update owner select options
         if (this.els.nodeOwner) {
@@ -490,6 +500,7 @@ export class UIManager {
         
         // Trigger type change to update value labels
         this.els.nodeType.dispatchEvent(new Event('change'));
+        this.updateSubItemsTotal();
         
         this.els.nodeModal.classList.remove('hidden');
     }
@@ -523,6 +534,11 @@ export class UIManager {
 
         // Sort sub-items by ratio descending before saving
         subItems.sort((a, b) => b.ratio - a.ratio);
+
+        if (subItems.length > 0 && !this.isSubItemsRatioValid(subItems)) {
+            alert('하위 구성 항목 비중 합계는 100%가 되어야 합니다.');
+            return;
+        }
 
         if (id) {
             this.model.updateNode(Number(id), { type, name, value, interestRate, owner, targetWeight, subItems });
@@ -697,10 +713,36 @@ export class UIManager {
         div.innerHTML = `
             <input type="text" placeholder="종목명" value="${name}" class="glass-input" style="flex: 2; padding: 6px; border-radius: 6px; font-size: 0.85rem;">
             <input type="number" placeholder="비중(%)" value="${ratio}" class="glass-input" style="flex: 1; padding: 6px; border-radius: 6px; font-size: 0.85rem;">
-            <button type="button" class="icon-btn-small" onclick="this.parentElement.remove()" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: none; width: 28px; height: 28px;">
+            <button type="button" class="icon-btn-small" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: none; width: 28px; height: 28px;">
                 <i class="fa-solid fa-times"></i>
             </button>
         `;
         this.els.subItemsContainer.appendChild(div);
+        const removeBtn = div.querySelector('button');
+        removeBtn.addEventListener('click', () => {
+            div.remove();
+            this.updateSubItemsTotal();
+        });
+        this.updateSubItemsTotal();
+    }
+
+    updateSubItemsTotal() {
+        if (!this.els.subItemsTotal) return;
+        const rows = this.els.subItemsContainer.querySelectorAll('.sub-item-row');
+        let total = 0;
+        rows.forEach(row => {
+            const ratioInput = row.querySelectorAll('input')[1];
+            total += Number(ratioInput?.value) || 0;
+        });
+
+        const roundedTotal = Math.round(total * 10) / 10;
+        this.els.subItemsTotal.textContent = `총합: ${roundedTotal}%`;
+        const isComplete = rows.length > 0 && Math.abs(roundedTotal - 100) < 0.1;
+        this.els.subItemsTotal.style.color = isComplete ? 'var(--accent-success)' : 'var(--text-secondary)';
+    }
+
+    isSubItemsRatioValid(subItems) {
+        const total = subItems.reduce((sum, item) => sum + (Number(item.ratio) || 0), 0);
+        return Math.abs(total - 100) < 0.1;
     }
 }
